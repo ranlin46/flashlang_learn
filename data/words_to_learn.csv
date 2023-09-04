@@ -1,88 +1,139 @@
-French,English
-partie,part
-histoire,history
-chercher,search
-seulement,only
-police,police
-pensais,thought
-aide,help
-demande,request
-genre,kind
-mois,month
-frère,brother
-laisser,let
-mettre,to put
-aucun,no
-laisse,leash
-eux,them
-ville,city
-chaque,each
-parlé,speak
-arrivé,come
-bébé,baby
-longtemps,long time
-heures,hours
-vont,will
-pendant,while
-revoir,meet again
-aucune,any
-place,square
-parle,speak
-savais,knew
-attention,Warning
-affaire,case
-donner,give
-type,type
-leurs,their
-donné,given
-train,train
-corps,body
-endroit,place
-yeux,eyes
-façon,way
-écoute,listen
-dont,whose
-trouve,find
-premier,first
-main,hand
-première,first
-côté,side
-pouvoir,power
-vieux,old
-sois,be
-tiens,here
-matin,morning
-tellement,so much
-enfant,child
-point,point
-venu,came
-pardon,sorry
-devant,in front of
-vers,towards
-minutes,minutes
-demandé,request
-chambre,bedroom
-droit,law
-aimerais,would like to
-aujourd'hui,today
-mari,husband
-cause,cause
-enfin,finally
-eau,water
-attendez,Wait
-parti,left
-nouvelle,new
-boulot,job
-arrêter,Stop
-terre,Earth
-compte,account
-donne,given
-loin,far
-fin,end
-croire,believe
-chérie,sweetheart
-gros,large
-plutôt,rather
-aura,will have
-jouer,to play
-bureau,office
+Phonetic,Word,Example
+[i],eat,Let's eat out tonight.
+[i],need,I need your help.
+[i],thief,They caught the thief.
+[ɪ],sit,Sit down please.
+[ɪ],fit,This shirt doesn't fit me.
+[ɪ],give,Give me a kiss.
+[e],lake,He lives by the lake.
+[e],make,I'll make coffee for you.
+[e],later,I'll be back later.
+[ɛ],bed,You should go to bed.
+[ɛ],let,Let me go.
+[ɛ],pen,Can I use your pen.
+[æ],bad,He is a bad boy.
+[æ],dad,My dad speaks English well.
+[æ],matter,What's the matter with him?
+[ɑ],lock,Lock the door please.
+[ɑ],hot,It's very hot today.
+[ɑ],stop,Stop crying!
+[ɑr],hard,The lesson is not hard.
+[ɑr],artist,His sister is an artist.
+[ɑr],far,I live far away from him.
+[ɔ],law,You should obey the law.
+[ɔ],saw,Where can I buy this saw?
+[ɔ],hall,I'll meet you at the hall.
+[ɔr],born,He was born two years ago.
+[ɔr],for,I did it for you.
+[ɔr],warning,You should listen to his warning.
+[ɔɪ],boy,The boy is angry.
+[ɔɪ],toy,He bought me a toy.
+[ɔɪ],soil,The soil is rich.
+[o],coat,Put on your coat.
+[o],soap,Use soap to wash your hands.
+[o],open,Open the door will you?
+[u],too,He is happy too.
+[u],mood,She is in a bad mood.
+[u],food,Do you enjoy the food?
+[ʊ],book,Whose book is this?
+[ʊ],good,His English is very good.
+[ʊ],would,Would you do me a favor?
+[ʊr],tour,We'll tour the city today.
+[ʊr],your,How's your father?
+[ʊr],poor,He is poor but happy.
+[ʌ],bus,The bus is coming
+[ʌ],money,I need more money.
+[ʌ],tough,I don't think the job is tough.
+[ə],ago,He left home two hours ago.
+[ə],seven,There are seven members in my family.
+[ə],sofa,There is a sofa by the window.
+[ʌr],bird,I see a bird in the cage.
+[ʌr],her,Her sister loves music very much.
+[ʌr],worry,Don't worry about me.
+[ər],letter,Don't forget to mail this letter.
+[ər],temper,She has a very bad temper.
+[ər],nature,I'm a nature lover.
+[aɪ],life,They led a happy life.
+[aɪ],child,The child never studies.
+[aɪ],idea,That sounds like a good idea.
+[aʊ],down,Walk down the street and turn left.
+[aʊ],how,How are you?
+[aʊ],house,The house is made of wood.
+[ɛr],dare,I dare not try it.
+[ɛr],air,The air is fresh here.
+[ɛr],careful,Be careful when you cross the street
+[ɪr],here,There is a tree here.
+[ɪə],idea,I have no idea where he is.
+[iə],real,Tell me the real reason.
+[p],put,Put the book on the desk.
+[p],pass,Pass me the salt please.
+[p],keep,Keep the change.
+[b],boy,The boy loves his father very much.
+[b],before,Look before you leap.
+[b],robber,I hate robbers.
+[t],take,Take the garbage with you when you leave.
+[t],teacher,My teacher has a good command of English
+[t],hit,Don't hit me.
+[d],days,How many days are there in a week?
+[d],under,Ted is hiding under the table.
+[d],red,His car is red; mine is green.
+[k],key,Where are my car keys?
+[k],cake,We bought a cake for his birthday.
+[k],book,He wrote a book on music.
+[g],go,Let's go to the movies tonight.
+[g],forget,Don't forget to mail this letter.
+[g],dog,He keeps a dog as a pet.
+[f],food,The food is tasty.
+[f],left,Turn left and go straight ahead.
+[f],wife,My wife cooks well.
+[v],very,I feel very tired today.
+[v],never,He never tells lies.
+[v],give,Give me a kiss honey.
+[θ],thank,Thank you very much for your help.
+[θ],healthy,He jogs every day to stay healthy.
+[θ],both,Both he and I are students.
+[ð],that,This is good but that is bad.
+[ð],father,His father and mother are coming this week
+[ð],with,Nobody likes to work with him.
+[s],see,See you later.
+[s],ask,May I ask you a question?
+[s],class,We don't have any class today.
+[z],zebra,Have you seen a zebra before?
+[z],busy,The line is busy.
+[z],is,Is he free now?
+[ʃ],ship,I see a ship there.
+[ʃ],show,Could you show me the way to the station?
+[ʃ],sure,I'm sure she can do that.
+[ʒ],pleasure,It's a pleasure to meet you.
+[ʒ],usual,He was late again as usual.
+[ʒ],television,I seldom watch television.
+[tʃ],church,He goes to church every Sunday.
+[tʃ],chase,He does nothing but chase girls all day.
+[tʃ],teach,Which class do you teach?
+[dʒ],joke,He likes to tell jokes.
+[dʒ],danger,The boy is in danger.
+[dʒ],strange,His behavior is strange.
+[m],me,Tell me the truth
+[m],woman,She is a beautiful woman.
+[m],time,What time is it now?
+[n],name,May I have your name please?
+[n],number,I forgot my phone number.
+[n],son,My son is your fan.
+[ŋ],bring,Bring me the book next time you come.
+[ŋ],drink,Would you care for a drink?
+[ŋ],think,What are you thinking?
+[l],long,How long have you studied English?
+[l],call,Call me when you are free.
+[l],look,It looks like rain.
+[r],read,Can you read this word?
+[r],red,I like the red car over there.
+[r],part,Part of the answer is right.
+[j],you,You can do it can't you?
+[j],yes,Yes I can.
+[j],young,She is young and beautiful.
+[h],he,He plays tennis very well.
+[h],hat,Take off your hat please.
+[h],hot,It's very hot today.
+[w],wood,The table is made of wood.
+[w],wind,The wind is strong today.
+[w],work,I don't have any work to do.

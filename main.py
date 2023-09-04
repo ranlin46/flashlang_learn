@@ -14,9 +14,9 @@ else:
 def next_card():
     global current_card
     current_card = random.choice(to_learn)
-    print("\nFrench: ", current_card['French'])
-    input("Press Enter to see the English translation...")
-    print("English: ", current_card['English'])
+    print("\nPhonetic: ", current_card['Phonetic'])
+    print("Word: ", current_card['Word'])
+    print("Example:", current_card['Example'])
 
 
 def is_known():
@@ -25,11 +25,11 @@ def is_known():
     data_k.to_csv("data/words_to_learn.csv", index=False)
 
 
-print("Welcome to Flashy - Command Line Version")
+print("Welcome to Flashy")
 
 while to_learn:
     next_card()
-    response = input("\nDid you know this word? (y/n): ").lower()
+    response = input("\nDid you know this phonetic? (y/n): ").lower()
     if response == 'y':
         is_known()
     elif response == 'n':
