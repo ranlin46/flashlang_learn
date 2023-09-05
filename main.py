@@ -1,40 +1,63 @@
-import pandas
+import sqlite3
 import random
 
-current_card = {}
-try:
-    data = pandas.read_csv('data/words_to_learn.csv')
-except FileNotFoundError:
-    original_data = pandas.read_csv('data/french_words.csv')
-    to_learn = original_data.to_dict('records')
-else:
-    to_learn = data.to_dict('records')
+# 连接到数据库文件
+conn = sqlite3.connect('flashcards_database.db')
+cursor = conn.cursor()
 
 
-def next_card():
-    global current_card
-    current_card = random.choice(to_learn)
-    print("\nPhonetic: ", current_card['Phonetic'])
-    print("Word: ", current_card['Word'])
-    print("Example:", current_card['Example'])
+class Flashcard:
+    def __init__(self, id, status, phonetic, word, sentence, audio_url, study_count):
+        self.id = id
+        self.status = status
+        self.phonetic = phonetic
+        self.word = word
+        self.sentence = sentence
+        self.audio_url = audio_url
+        self.study_count = study_count
 
 
-def is_known():
-    to_learn.remove(current_card)
-    data_k = pandas.DataFrame(to_learn)
-    data_k.to_csv("data/words_to_learn.csv", index=False)
+def load_flashcards():
+    cursor.execute("SELECT * FROM flashcards_database WHERE status IN (0, 1)")
+    records = cursor.fetchall()
+    flashcards = [Flashcard(*record) for record in records]
+    random.shuffle(flashcards)
+    return flashcards
 
 
-print("Welcome to Flashy")
+def show_flashcard(flashcard):
+    print(f"Word: {flashcard.word}")
+    print(f"Phonetic: {flashcard.phonetic}")
+    print(f"Sentence: {flashcard.sentence}")
+    print(f"Audio URL: {flashcard.audio_url}")
 
-while to_learn:
-    next_card()
-    response = input("\nDid you know this phonetic? (y/n): ").lower()
-    if response == 'y':
-        is_known()
-    elif response == 'n':
-        continue
-    else:
-        print("Invalid input. Please enter 'y' or 'n'.")
 
-print("Congratulations! You've learned all the words.")
+def update_status(flashcard, choice):
+    if choice == "familiar":
+        flashcard.status = 3  # 掌握
+    elif choice == "review":
+        flashcard.status = 2  # 复习
+        flashcard.study_count += 1
+    elif choice == "learn":
+        flashcard.status = 1  # 学习
+        flashcard.study_count += 1
+
+
+
+def main():
+    flashcards = load_flashcards()
+    for flashcard in flashcards:
+        show_flashcard(flashcard)
+        choice = input("\nChoose an action (learn/review/familiar): ").lower()
+        update_status(flashcard, choice)
+        cursor.execute("UPDATE flashcards_database SET status = ?, study_count = ? WHERE id = ?",
+                       (flashcard.status, flashcard.study_count, flashcard.id))
+        conn.commit()
+        print("\n")
+
+    conn.close()
+    print("学习完成！")
+
+
+if __name__ == "__main__":
+    main()
