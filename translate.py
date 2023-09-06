@@ -16,7 +16,7 @@ cursor.execute('''
     )
 ''')
 
-with open('data/french_words.csv', 'r') as csvfile:
+with open('data/url_file.csv', 'r') as csvfile:
     csvreader = csv.reader(csvfile)
     next(csvreader)  # 跳过CSV文件的标题行（如果有）
     for row in csvreader:

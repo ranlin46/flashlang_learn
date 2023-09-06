@@ -1,6 +1,9 @@
 import sqlite3
 import random
+import pygame
 
+# 在load_flashcards函数之前初始化pygame
+pygame.init()
 # 连接到数据库文件
 conn = sqlite3.connect('flashcards_database.db')
 cursor = conn.cursor()
@@ -18,7 +21,7 @@ class Flashcard:
 
 
 def load_flashcards():
-    cursor.execute("SELECT * FROM flashcards_database WHERE status IN (0, 1)")
+    cursor.execute("SELECT * FROM flashcards_database WHERE status IN (0, 1, 2)")
     records = cursor.fetchall()
     flashcards = [Flashcard(*record) for record in records]
     random.shuffle(flashcards)
@@ -26,10 +29,14 @@ def load_flashcards():
 
 
 def show_flashcard(flashcard):
-    print(f"Word: {flashcard.word}")
     print(f"Phonetic: {flashcard.phonetic}")
+    print(f"Word: {flashcard.word}")
     print(f"Sentence: {flashcard.sentence}")
     print(f"Audio URL: {flashcard.audio_url}")
+
+    # 播放音频
+    pygame.mixer.music.load(flashcard.audio_url)  # 使用音频文件的路径
+    pygame.mixer.music.play()
 
 
 def update_status(flashcard, choice):
@@ -43,7 +50,6 @@ def update_status(flashcard, choice):
         flashcard.study_count += 1
 
 
-
 def main():
     flashcards = load_flashcards()
     for flashcard in flashcards:
@@ -54,6 +60,11 @@ def main():
                        (flashcard.status, flashcard.study_count, flashcard.id))
         conn.commit()
         print("\n")
+        go_head = input("Do you want to go on?(yes/no)").lower()
+        if go_head == 'no':
+            break
+        else:
+            continue
 
     conn.close()
     print("学习完成！")
