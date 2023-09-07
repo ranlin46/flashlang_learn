@@ -2,7 +2,7 @@ import sqlite3
 import random
 import pygame
 
-# 在load_flashcards函数之前初始化pygame
+# 初始化pygame
 pygame.init()
 # 连接到数据库文件
 conn = sqlite3.connect('flashcards_database.db')
@@ -37,6 +37,8 @@ def show_flashcard(flashcard):
     # 播放音频
     pygame.mixer.music.load(flashcard.audio_url)  # 使用音频文件的路径
     pygame.mixer.music.play()
+    while pygame.mixer.music.get_busy():
+        pygame.time.delay(100)  # 每100毫秒检查一次音乐是否仍在播放
 
 
 def update_status(flashcard, choice):
@@ -52,19 +54,20 @@ def update_status(flashcard, choice):
 
 def main():
     flashcards = load_flashcards()
-    for flashcard in flashcards:
+    quit_program = False  # 添加一个标志来控制是否退出程序
+
+    while flashcards and not quit_program:
+        flashcard = random.choice(flashcards)  # 随机选择一个卡片
         show_flashcard(flashcard)
-        choice = input("\nChoose an action (learn/review/familiar): ").lower()
-        update_status(flashcard, choice)
-        cursor.execute("UPDATE flashcards_database SET status = ?, study_count = ? WHERE id = ?",
-                       (flashcard.status, flashcard.study_count, flashcard.id))
-        conn.commit()
-        print("\n")
-        go_head = input("Do you want to go on?(yes/no)").lower()
-        if go_head == 'no':
-            break
+        choice = input("\nChoose an action (learn/review/familiar) or press 'q' to quit: ").lower()
+
+        if choice == 'q':
+            quit_program = True
         else:
-            continue
+            update_status(flashcard, choice)
+            cursor.execute("UPDATE flashcards SET status = ?, study_count = ? WHERE id = ?",
+                           (flashcard.status, flashcard.study_count, flashcard.id))
+            conn.commit()
 
     conn.close()
     print("学习完成！")

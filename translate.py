@@ -15,8 +15,8 @@ cursor.execute('''
         study_count INTEGER
     )
 ''')
-
-with open('data/url_file.csv', 'r') as csvfile:
+# 因为音标符号有点特殊，所以需要加上编码方式，不然有些会出现乱码
+with open('data/url_file.csv', 'r', encoding="utf-8") as csvfile:
     csvreader = csv.reader(csvfile)
     next(csvreader)  # 跳过CSV文件的标题行（如果有）
     for row in csvreader:
