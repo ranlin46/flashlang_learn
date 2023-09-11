@@ -74,7 +74,7 @@ Status,Phonetic,Word,Example,Audio_url,Study_count
 0,[t],take,Take the garbage with you when you leave.,data/audio/t_take.MP3,0
 0,[t],teacher,My teacher has a good command of English,data/audio/t_teacher.MP3,0
 0,[t],hit,Don't hit me.,data/audio/t_hit.MP3,0
-0,[d],days,How many days are there in a week?,data/audio/d_days.MP3,0
+0,[d],day,How many days are there in a week?,data/audio/d_day.MP3,0
 0,[d],under,Ted is hiding under the table.,data/audio/d_under.MP3,0
 0,[d],red,His car is red; mine is green.,data/audio/d_red.MP3,0
 0,[k],key,Where are my car keys?,data/audio/k_key.MP3,0
