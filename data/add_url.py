@@ -1,7 +1,7 @@
 import re
 
 # 读取文件内容
-with open('french_words.csv', 'r') as file:
+with open('french_words.csv', 'r', encoding="utf-8") as file:
     file_contents = file.read()
 
 # 使用正则表达式来匹配并替换URL
@@ -20,5 +20,5 @@ for match in matches:
     file_contents = file_contents.replace(full_match, replacement)
 
 # 将替换后的内容写回文件
-with open('url_file.csv', 'w') as file:
+with open('url_file.csv', 'w', encoding="utf-8") as file:
     file.write(file_contents)

@@ -21,7 +21,7 @@ class Flashcard:
 
 
 def load_flashcards():
-    cursor.execute("SELECT * FROM flashcards_database WHERE status IN (0, 1, 2)")
+    cursor.execute("SELECT * FROM flashcards_database WHERE status IN (1, 2)")
     records = cursor.fetchall()
     flashcards = [Flashcard(*record) for record in records]
     random.shuffle(flashcards)
@@ -42,9 +42,7 @@ def show_flashcard(flashcard):
 
 
 def update_status(flashcard, choice):
-    if choice == "familiar":
-        flashcard.status = 3  # 掌握
-    elif choice == "review":
+    if choice == "review":
         flashcard.status = 2  # 复习
         flashcard.study_count += 1
     elif choice == "learn":
@@ -59,13 +57,13 @@ def main():
     while flashcards and not quit_program:
         flashcard = random.choice(flashcards)  # 随机选择一个卡片
         show_flashcard(flashcard)
-        choice = input("\nChoose an action (learn/review/familiar) or press 'q' to quit: ").lower()
+        choice = input("\nChoose an action (learn/review) or press 'q' to quit: ").lower()
 
         if choice == 'q':
             quit_program = True
         else:
             update_status(flashcard, choice)
-            cursor.execute("UPDATE flashcards SET status = ?, study_count = ? WHERE id = ?",
+            cursor.execute("UPDATE flashcards_database SET status = ?, study_count = ? WHERE id = ?",
                            (flashcard.status, flashcard.study_count, flashcard.id))
             conn.commit()
 
