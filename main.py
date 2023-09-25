@@ -4,6 +4,7 @@ import pygame
 
 # 初始化pygame
 pygame.init()
+
 # 连接到数据库文件
 conn = sqlite3.connect('flashcards_database.db')
 cursor = conn.cursor()
@@ -135,6 +136,76 @@ def decide_learning_status(learning_table_name, flashcard):
         return 1
 
 
+def create_individual_learning_tables(learning_table_name):
+    # 查询表2中不同的CardID
+    cursor.execute(f"SELECT DISTINCT CardID FROM {learning_table_name}")
+    card_ids = [row[0] for row in cursor.fetchall()]
+
+    # 为每个CardID创建一个独立的学习记录表格
+    for card_id in card_ids:
+        # 表3的名称格式：LearningTable_CardID
+        table_name = f"individual_record_{card_id}"
+        cursor.execute(f'''
+            CREATE TABLE IF NOT EXISTS {table_name} (
+                RecordID INTEGER PRIMARY KEY,
+                CardID INTEGER,
+                LearnDate DATE,
+                YesCount INTEGER,
+                NoCount INTEGER,
+                LearningStatus INTEGER
+            )
+        ''')
+
+    conn.commit()
+
+
+def record_learning_status_for_individual_tables(learning_table_name):
+    # 查询表2中的学习记录
+    cursor.execute(f"SELECT * FROM {learning_table_name}")
+    records = cursor.fetchall()
+
+    for record in records:
+        card_id = record[2]  # 获取CardID
+        # 表3的名称格式：LearningTable_CardID
+        table_name = f"individual_record_{card_id}"
+
+        # 插入学习记录到相应的表3中
+        cursor.execute(f'''
+            INSERT INTO {table_name} (CardID, LearnDate, YesCount, NoCount, LearningStatus)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (record[2], record[1], record[3], record[4], record[5]))
+
+    conn.commit()
+
+
+def update_flashcard_status(choice, flashcard):
+    if choice == 'yes' or choice == 'no':
+        update_status(choice, learning_table_name, flashcard)
+    else:
+        print("无效的选项")
+
+
+def cleanup_and_exit(learning_table_name, flashcards):
+    for flashcard in flashcards:
+        # 计算学习状态
+        status = decide_learning_status(learning_table_name, flashcard)
+
+        # 更新表1的状态和日期
+        cursor.execute("UPDATE flashcards_database SET status = ?, date = date('now') WHERE id = ?",
+                       (status, flashcard.id))
+        conn.commit()
+
+    create_individual_learning_tables(learning_table_name)
+    record_learning_status_for_individual_tables(learning_table_name)
+
+    # 使用DELETE语句删除学习状态为2的记录
+    cursor.execute(f"DELETE FROM {learning_table_name} WHERE LearningStatus = 2")
+    conn.commit()
+
+    conn.close()
+    print("学习完成！")
+
+
 def main():
     initialize_tables()  # 初始化表2
     flashcards = get_flashcards(learning_table_name)
@@ -146,21 +217,11 @@ def main():
         choice = input("\nChoose an action (yes/no) or press 'q' to quit: ").lower()
 
         if choice == 'q':
-            for flashcard in flashcards:
-                # 计算学习状态
-                status = decide_learning_status(learning_table_name, flashcard)
-
-                # 更新表1的状态和日期
-                cursor.execute("UPDATE flashcards_database SET status = ?, date = date('now') WHERE id = ?",
-                               (status, flashcard.id))
-                conn.commit()
-
             quit_program = True
         else:
-            update_status(choice, learning_table_name, flashcard)
+            update_flashcard_status(choice, flashcard)
 
-    conn.close()
-    print("学习完成！")
+    cleanup_and_exit(learning_table_name, flashcards)
 
 
 if __name__ == "__main__":
