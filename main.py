@@ -6,21 +6,22 @@ import pygame
 pygame.init()
 
 # 连接到数据库文件
-conn = sqlite3.connect('flashcards_database.db')
+conn = sqlite3.connect('flashcards_database.db')  # 表1
 cursor = conn.cursor()
 
 learning_table_name = "Table2"  # 学习历史表的表名
 
 
 class Flashcard:
-    def __init__(self, id, status, phonetic, word, sentence, audio_url, date):
+    def __init__(self, id, status, phonetic, word, sentence, audio_url, learn_date, next_review_date):
         self.id = id
         self.status = status
         self.phonetic = phonetic
         self.word = word
         self.sentence = sentence
         self.audio_url = audio_url
-        self.date = date
+        self.learn_date = learn_date
+        self.next_review_date = next_review_date
 
 
 def initialize_tables():
@@ -50,7 +51,7 @@ def initialize_tables():
         cursor.execute('''
             INSERT INTO Table2 (LearnDate, CardID, YesCount, NoCount, LearningStatus)
             VALUES (?, ?, ?, ?, ?)
-        ''', (flashcard.date, flashcard.id, 0, 0, flashcard.status))
+        ''', (0, flashcard.id, 0, 0, flashcard.status))
 
         inserted_card_ids.add(flashcard.id)  # 将插入的卡片ID添加到集合中
         conn.commit()
@@ -191,8 +192,13 @@ def cleanup_and_exit(learning_table_name, flashcards):
         status = decide_learning_status(learning_table_name, flashcard)
 
         # 更新表1的状态和日期
-        cursor.execute("UPDATE flashcards_database SET status = ?, date = date('now') WHERE id = ?",
-                       (status, flashcard.id))
+        cursor.execute(f"""
+            UPDATE flashcards_database 
+            SET status = ?, LearnDate = (SELECT LearnDate FROM {learning_table_name} WHERE CardID = ?)
+            WHERE id = ?
+        """, (status, flashcard.id, flashcard.id))
+        conn.commit()
+
         conn.commit()
 
     create_individual_learning_tables(learning_table_name)
