@@ -1,6 +1,8 @@
 import sqlite3
 import random
 import pygame
+from datetime import datetime, timedelta
+
 
 # 初始化pygame
 pygame.init()
@@ -144,18 +146,25 @@ def create_individual_learning_tables(learning_table_name):
 
     # 为每个CardID创建一个独立的学习记录表格
     for card_id in card_ids:
-        # 表3的名称格式：LearningTable_CardID
-        table_name = f"individual_record_{card_id}"
-        cursor.execute(f'''
-            CREATE TABLE IF NOT EXISTS {table_name} (
-                RecordID INTEGER PRIMARY KEY,
-                CardID INTEGER,
-                LearnDate DATE,
-                YesCount INTEGER,
-                NoCount INTEGER,
-                LearningStatus INTEGER
-            )
-        ''')
+        # 查询表2中的学习记录
+        cursor.execute(f"SELECT * FROM {learning_table_name} WHERE CardID = ?", (card_id,))
+        record = cursor.fetchone()
+
+        # 判断是否应该创建表3
+        if record[1] != 0:
+            # 表3的名称格式：individual_record_CardID
+            table_name = f"individual_record_{card_id}"
+            cursor.execute(f'''
+                CREATE TABLE IF NOT EXISTS {table_name} (
+                    RecordID INTEGER PRIMARY KEY,
+                    CardID INTEGER,
+                    LearnDate DATE,
+                    YesCount INTEGER,
+                    NoCount INTEGER,
+                    LearningStatus INTEGER,
+                    NextReviewDate DATE
+                )
+            ''')
 
     conn.commit()
 
@@ -167,16 +176,49 @@ def record_learning_status_for_individual_tables(learning_table_name):
 
     for record in records:
         card_id = record[2]  # 获取CardID
-        # 表3的名称格式：LearningTable_CardID
+        # 表3的名称格式：individual_record_CardID
         table_name = f"individual_record_{card_id}"
 
-        # 插入学习记录到相应的表3中
-        cursor.execute(f'''
-            INSERT INTO {table_name} (CardID, LearnDate, YesCount, NoCount, LearningStatus)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (record[2], record[1], record[3], record[4], record[5]))
+        # 判断是否应该插入学习记录到表3
+        if record[1] != 0:
+            # 插入学习记录到相应的表3中
+            cursor.execute(f'''
+                INSERT INTO {table_name} (CardID, LearnDate, YesCount, NoCount, LearningStatus)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (record[2], record[1], record[3], record[4], record[5]))
+            conn.commit()
+            # 在这里添加判断，只有当表3中只有一行内容时才执行下一个函数
+            cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
+            count = cursor.fetchone()[0]
+
+            if count == 1:
+                # 表3中只有一行内容，执行下一个函数
+                insert_initial_review_dates(card_id)
 
     conn.commit()
+
+
+def insert_initial_review_dates(card_id):
+    review_list = [1, 2, 3, 4, 7, 8, 15, 30]
+    table_name = f"individual_record_{card_id}"
+
+    # 查询表3中是否已存在相关数据
+    cursor.execute(f"SELECT LearnDate FROM {table_name}")
+    learn_date_str = cursor.fetchone()[0]  # 获取学习日期字符串
+
+    # 将学习日期字符串解析为日期对象
+    current_study_date = datetime.strptime(learn_date_str, '%Y-%m-%d').date()
+
+    # 依次插入多个复习日期
+    for interval in review_list:
+        # 计算下次复习日期
+        next_review_date = current_study_date + timedelta(days=interval)
+
+        # 插入下次复习日期到表3中
+        cursor.execute(f"INSERT INTO {table_name} (CardID, NextReviewDate) VALUES (?, ?)", (card_id, next_review_date))
+
+    conn.commit()
+
 
 
 def update_flashcard_status(choice, flashcard):
