@@ -3,7 +3,6 @@ import random
 import pygame
 from datetime import datetime, timedelta
 
-
 # 初始化pygame
 pygame.init()
 
@@ -68,9 +67,18 @@ def enough_data_in_table2():
 
 
 def load_flashcards():
-    cursor.execute("SELECT * FROM flashcards_database WHERE status IN (1, 2)")
+    # 查询NextReviewDate为当天的卡片
+    cursor.execute("SELECT * FROM flashcards_database WHERE status IN (1, 2) AND NextReviewDate = date('now')")
     records = cursor.fetchall()
-    flashcards = [Flashcard(*record) for record in records]
+
+    if records:
+        flashcards = [Flashcard(*record) for record in records]
+    else:
+        # 如果没有NextReviewDate为当天的卡片，则查询其他卡片
+        cursor.execute("SELECT * FROM flashcards_database WHERE status IN (1, 2)")
+        records = cursor.fetchall()
+        flashcards = [Flashcard(*record) for record in records]
+
     random.shuffle(flashcards)
     return flashcards
 
@@ -194,6 +202,9 @@ def record_learning_status_for_individual_tables(learning_table_name):
             if count == 1:
                 # 表3中只有一行内容，执行下一个函数
                 insert_initial_review_dates(card_id)
+                update_next_review_date(card_id)
+            else:
+                update_next_review_date(card_id)
 
     conn.commit()
 
@@ -219,6 +230,21 @@ def insert_initial_review_dates(card_id):
 
     conn.commit()
 
+
+def update_next_review_date(card_id):
+    table_name = f"individual_record_{card_id}"
+
+    # 查询LearnDate为空的第一条NextReviewDate数据
+    cursor.execute(f"SELECT NextReviewDate FROM {table_name} WHERE CardID = ? AND LearnDate IS NULL ORDER BY "
+                   f"NextReviewDate ASC LIMIT 1", (card_id,))
+    result = cursor.fetchone()
+
+    if result:
+        next_review_date = result[0]
+
+        # 更新表1中的NextReviewDate字段
+        cursor.execute("UPDATE flashcards_database SET NextReviewDate = ? WHERE id = ?", (next_review_date, card_id))
+        conn.commit()
 
 
 def update_flashcard_status(choice, flashcard):
@@ -247,7 +273,7 @@ def cleanup_and_exit(learning_table_name, flashcards):
     record_learning_status_for_individual_tables(learning_table_name)
 
     # 使用DELETE语句删除学习状态为2的记录
-    cursor.execute(f"DELETE FROM {learning_table_name} WHERE LearningStatus = 2")
+    cursor.execute(f"DELETE FROM {learning_table_name} WHERE LearningStatus = 2 AND (YesCount > 0 OR NoCount > 0)")
     conn.commit()
 
     conn.close()
