@@ -45,6 +45,27 @@ def create_learning_history_table():
     ''')
 
 
+# 加载单词卡片
+def load_flashcards():
+    cursor.execute("SELECT * FROM flashcards_database WHERE status IN (1, 2) AND NextReviewDate = date('now')")
+    records = cursor.fetchall()
+    if records:
+        flashcards = [Flashcard(*record) for record in records]
+    else:
+        cursor.execute("SELECT * FROM flashcards_database WHERE status IN (1, 2)")
+        records = cursor.fetchall()
+        flashcards = [Flashcard(*record) for record in records]
+    random.shuffle(flashcards)
+    return flashcards
+
+
+# 检查是否有足够的数据在表2中
+def enough_data_in_table2():
+    cursor.execute("SELECT COUNT(*) FROM Table2")
+    count = cursor.fetchone()[0]
+    return count >= 10
+
+
 # 插入初始数据
 def insert_initial_data():
     inserted_card_ids = set()
@@ -60,29 +81,8 @@ def insert_initial_data():
         conn.commit()
 
 
-# 检查是否有足够的数据在表2中
-def enough_data_in_table2():
-    cursor.execute("SELECT COUNT(*) FROM Table2")
-    count = cursor.fetchone()[0]
-    return count >= 10
-
-
-# 加载单词卡片
-def load_flashcards():
-    cursor.execute("SELECT * FROM flashcards_database WHERE status IN (1, 2) AND NextReviewDate = date('now')")
-    records = cursor.fetchall()
-    if records:
-        flashcards = [Flashcard(*record) for record in records]
-    else:
-        cursor.execute("SELECT * FROM flashcards_database WHERE status IN (1, 2)")
-        records = cursor.fetchall()
-        flashcards = [Flashcard(*record) for record in records]
-    random.shuffle(flashcards)
-    return flashcards
-
-
 # 获取待学习的单词卡片
-def get_flashcards(learning_table_name):
+def get_flashcards():
     cursor.execute(f"SELECT DISTINCT CardID FROM {learning_table_name}")
     card_ids = [row[0] for row in cursor.fetchall()]
     flashcards = []
@@ -108,7 +108,7 @@ def show_flashcard(flashcard):
 
 
 # 更新学习状态
-def update_status(choice, learning_table_name, flashcard):
+def update_status(choice, flashcard):
     if choice == "yes":
         cursor.execute(f"UPDATE {learning_table_name} SET YesCount = YesCount + 1 WHERE CardID = ?",
                        (flashcard.id,))
@@ -119,12 +119,12 @@ def update_status(choice, learning_table_name, flashcard):
         print("无效的选项")
     cursor.execute(
         f"UPDATE {learning_table_name} SET LearnDate = date('now'), LearningStatus = ? WHERE CardID = ?",
-        (decide_learning_status(learning_table_name, flashcard), flashcard.id))
+        (decide_learning_status(flashcard), flashcard.id))
     conn.commit()
 
 
 # 决定学习状态
-def decide_learning_status(learning_table_name, flashcard):
+def decide_learning_status(flashcard):
     cursor.execute(f"SELECT YesCount, NoCount FROM {learning_table_name} WHERE CardID = ?", (flashcard.id,))
     result = cursor.fetchone()
     yes_count = result[0] if result else 0
@@ -136,7 +136,7 @@ def decide_learning_status(learning_table_name, flashcard):
 
 
 # 创建个体学习记录表格
-def create_individual_learning_tables(learning_table_name):
+def create_individual_learning_tables():
     cursor.execute(f"SELECT DISTINCT CardID FROM {learning_table_name}")
     card_ids = [row[0] for row in cursor.fetchall()]
     for card_id in card_ids:
@@ -159,7 +159,7 @@ def create_individual_learning_tables(learning_table_name):
 
 
 # 记录学习状态到个体学习记录表格
-def record_learning_status_for_individual_tables(learning_table_name):
+def record_learning_status_for_individual_tables():
     cursor.execute(f"SELECT * FROM {learning_table_name}")
     records = cursor.fetchall()
     for record in records:
@@ -212,23 +212,23 @@ def update_next_review_date(card_id):
 # 更新单词卡片状态
 def update_flashcard_status(choice, flashcard):
     if choice == 'yes' or choice == 'no':
-        update_status(choice, learning_table_name, flashcard)
+        update_status(choice, flashcard)
     else:
         print("无效的选项")
 
 
 # 清理数据并退出程序
-def cleanup_and_exit(learning_table_name, flashcards):
+def cleanup_and_exit(flashcards):
     for flashcard in flashcards:
-        status = decide_learning_status(learning_table_name, flashcard)
+        status = decide_learning_status(flashcard)
         cursor.execute(f"""
             UPDATE flashcards_database 
             SET status = ?, LearnDate = (SELECT LearnDate FROM {learning_table_name} WHERE CardID = ?)
             WHERE id = ?
         """, (status, flashcard.id, flashcard.id))
         conn.commit()
-    create_individual_learning_tables(learning_table_name)
-    record_learning_status_for_individual_tables(learning_table_name)
+    create_individual_learning_tables()
+    record_learning_status_for_individual_tables()
     cursor.execute(f"DELETE FROM {learning_table_name} WHERE LearningStatus = 2 AND (YesCount > 0 OR NoCount > 0)")
     conn.commit()
     conn.close()
@@ -238,7 +238,7 @@ def cleanup_and_exit(learning_table_name, flashcards):
 # 主函数
 def main():
     initialize_tables()
-    flashcards = get_flashcards(learning_table_name)
+    flashcards = get_flashcards()
     quit_program = False
     while flashcards and not quit_program:
         flashcard = random.choice(flashcards)
@@ -248,7 +248,7 @@ def main():
             quit_program = True
         else:
             update_flashcard_status(choice, flashcard)
-    cleanup_and_exit(learning_table_name, flashcards)
+    cleanup_and_exit(flashcards)
 
 
 if __name__ == "__main__":
