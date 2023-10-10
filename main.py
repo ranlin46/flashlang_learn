@@ -165,19 +165,33 @@ def record_learning_status_for_individual_tables():
     for record in records:
         card_id = record[2]
         table_name = f"individual_record_{card_id}"
-        if record[1] != 0:
+
+        # 查询个体学习记录表中是否已经存在数据
+        cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
+        count = cursor.fetchone()[0]
+
+        # 获取学习日期
+        learn_date = record[1]
+
+        if count == 0:
+            # 如果个体学习记录表中没有数据，插入新数据
             cursor.execute(f'''
                 INSERT INTO {table_name} (CardID, LearnDate, YesCount, NoCount, LearningStatus)
                 VALUES (?, ?, ?, ?, ?)
-            ''', (record[2], record[1], record[3], record[4], record[5]))
+            ''', (card_id, learn_date, record[3], record[4], record[5]))
             conn.commit()
             cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
             count = cursor.fetchone()[0]
             if count == 1:
                 insert_initial_review_dates(card_id)
                 update_next_review_date(card_id)
-            else:
-                update_next_review_date(card_id)
+        else:
+            cursor.execute(f'''
+                            UPDATE {table_name} SET YesCount = ?, NoCount = ?, LearningStatus = ?,LearnDate = ? WHERE 
+                            NextReviewDate = ? ''', (record[3], record[4], record[5], learn_date, learn_date))
+            conn.commit()
+            update_next_review_date(card_id)
+
     conn.commit()
 
 
