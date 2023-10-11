@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 
 pygame.init()
 
-# Database initialization
 conn = sqlite3.connect('flashcards_database.db')
 cursor = conn.cursor()
 
@@ -163,6 +162,15 @@ def create_individual_learning_tables():
     conn.commit()
 
 
+def is_table_exists(table_name):
+    # 检查表是否存在
+    query = f"PRAGMA table_info({table_name})"
+    result = fetch_all(query)
+
+    # 如果表存在，result将包含表的信息，否则result为空
+    return bool(result)
+
+
 def record_learning_status_for_individual_tables():
     query = f"SELECT * FROM {LEARNING_TABLE_NAME}"
     records = fetch_all(query)
@@ -170,32 +178,30 @@ def record_learning_status_for_individual_tables():
     for record in records:
         card_id = record[2]
         table_name = f"individual_record_{card_id}"
-
-        query = f"SELECT COUNT(*) FROM {table_name}"
-        count = fetch_all(query)[0][0]
-        learn_date = record[1]
-
-        if count == 0:
-            query = f'''
-                INSERT INTO {table_name} (CardID, LearnDate, YesCount, NoCount, LearningStatus)
-                VALUES (?, ?, ?, ?, ?)
-            '''
-            execute_query(query, (card_id, learn_date, record[3], record[4], record[5]))
-
+        if is_table_exists(table_name):
             query = f"SELECT COUNT(*) FROM {table_name}"
             count = fetch_all(query)[0][0]
+            learn_date = record[1]
 
-            if count == 1:
-                insert_initial_review_dates(card_id)
+            if count == 0:
+                query = f'''
+                    INSERT INTO {table_name} (CardID, LearnDate, YesCount, NoCount, LearningStatus)
+                    VALUES (?, ?, ?, ?, ?)'''
+                execute_query(query, (card_id, learn_date, record[3], record[4], record[5]))
+
+                query = f"SELECT COUNT(*) FROM {table_name}"
+                count = fetch_all(query)[0][0]
+
+                if count == 1:
+                    insert_initial_review_dates(card_id)
+                    update_next_review_date(card_id)
+            else:
+                query = f'''
+                    UPDATE {table_name}
+                    SET YesCount = ?, NoCount = ?, LearningStatus = ?, LearnDate = ?
+                    WHERE NextReviewDate = ?'''
+                execute_query(query, (record[3], record[4], record[5], learn_date, learn_date))
                 update_next_review_date(card_id)
-        else:
-            query = f'''
-                UPDATE {table_name}
-                SET YesCount = ?, NoCount = ?, LearningStatus = ?, LearnDate = ?
-                WHERE NextReviewDate = ?
-            '''
-            execute_query(query, (record[3], record[4], record[5], learn_date, learn_date))
-            update_next_review_date(card_id)
 
     conn.commit()
 
@@ -233,7 +239,7 @@ def update_next_review_date(card_id):
         execute_query(query, (next_review_date, card_id))
     else:
         query = "UPDATE flashcards_database SET status = 3 WHERE id = ?"
-        execute_query(query, (card_id))
+        execute_query(query, card_id)
 
     conn.commit()
 
@@ -245,15 +251,29 @@ def update_flashcard_status(choice, flashcard):
         print("Invalid choice")
 
 
+def should_update_flashcard(flashcard):
+    # 根据您的特定条件来判断是否应该更新 flashcard
+    # 例如，只更新满足某些条件的 flashcard
+    query = f"SELECT YesCount, NoCount FROM {LEARNING_TABLE_NAME} WHERE CardID = ?"
+    result = fetch_all(query, (flashcard.id,))
+    yes_count, no_count = result[0] if result else (0, 0)
+
+    if yes_count > 0 or no_count > 0:
+        return True
+    else:
+        return False
+
+
 def cleanup_and_exit(flashcards):
     for flashcard in flashcards:
-        status = decide_learning_status(flashcard)
-        query = f"""
-            UPDATE flashcards_database
-            SET status = ?, LearnDate = (SELECT LearnDate FROM {LEARNING_TABLE_NAME} WHERE CardID = ?)
-            WHERE id = ?
-        """
-        execute_query(query, (status, flashcard.id, flashcard.id))
+        if should_update_flashcard(flashcard):
+            status = decide_learning_status(flashcard)
+            query = f"""
+                UPDATE flashcards_database
+                SET status = ?, LearnDate = (SELECT LearnDate FROM {LEARNING_TABLE_NAME} WHERE CardID = ?)
+                WHERE id = ?
+            """
+            execute_query(query, (status, flashcard.id, flashcard.id))
     create_individual_learning_tables()
     record_learning_status_for_individual_tables()
 
