@@ -100,7 +100,7 @@ def get_flashcards():
 
 
 def show_flashcard(flashcard):
-    print(f"Phonetic: {flashcard.phonetic}")
+    print(f"\nPhonetic: {flashcard.phonetic}")
     print(f"Word: {flashcard.word}")
     print(f"Sentence: {flashcard.sentence}")
     pygame.mixer.music.load(flashcard.audio_url)
@@ -110,7 +110,7 @@ def show_flashcard(flashcard):
         pygame.time.delay(100)
 
 
-def update_status(choice, flashcard):
+def record_count(choice, flashcard):
     if choice == "yes":
         query = f"UPDATE {LEARNING_TABLE_NAME} SET YesCount = YesCount + 1 WHERE CardID = ?"
         execute_query(query, (flashcard.id,))
@@ -159,17 +159,6 @@ def create_individual_learning_tables():
                 )
             ''')
 
-    conn.commit()
-
-
-def is_table_exists(table_name):
-    # 检查表是否存在
-    query = f"PRAGMA table_info({table_name})"
-    result = fetch_all(query)
-
-    # 如果表存在，result将包含表的信息，否则result为空
-    return bool(result)
-
 
 def record_learning_status_for_individual_tables():
     query = f"SELECT * FROM {LEARNING_TABLE_NAME}"
@@ -177,12 +166,11 @@ def record_learning_status_for_individual_tables():
 
     for record in records:
         card_id = record[2]
+        learn_date = record[1]
         table_name = f"individual_record_{card_id}"
-        if is_table_exists(table_name):
+        if learn_date != 0:
             query = f"SELECT COUNT(*) FROM {table_name}"
             count = fetch_all(query)[0][0]
-            learn_date = record[1]
-
             if count == 0:
                 query = f'''
                     INSERT INTO {table_name} (CardID, LearnDate, YesCount, NoCount, LearningStatus)
@@ -194,16 +182,14 @@ def record_learning_status_for_individual_tables():
 
                 if count == 1:
                     insert_initial_review_dates(card_id)
-                    update_next_review_date(card_id)
             else:
                 query = f'''
                     UPDATE {table_name}
                     SET YesCount = ?, NoCount = ?, LearningStatus = ?, LearnDate = ?
                     WHERE NextReviewDate = ?'''
                 execute_query(query, (record[3], record[4], record[5], learn_date, learn_date))
-                update_next_review_date(card_id)
 
-    conn.commit()
+            update_next_review_date(card_id)
 
 
 def insert_initial_review_dates(card_id):
@@ -218,8 +204,6 @@ def insert_initial_review_dates(card_id):
         next_review_date = current_study_date + timedelta(days=interval)
         query = f"INSERT INTO {table_name} (CardID, NextReviewDate) VALUES (?, ?)"
         execute_query(query, (card_id, next_review_date))
-
-    conn.commit()
 
 
 def update_next_review_date(card_id):
@@ -239,21 +223,17 @@ def update_next_review_date(card_id):
         execute_query(query, (next_review_date, card_id))
     else:
         query = "UPDATE flashcards_database SET status = 3 WHERE id = ?"
-        execute_query(query, card_id)
-
-    conn.commit()
+        execute_query(query, (card_id,))
 
 
-def update_flashcard_status(choice, flashcard):
+def record_flashcard_count(choice, flashcard):
     if choice in ('yes', 'no'):
-        update_status(choice, flashcard)
+        record_count(choice, flashcard)
     else:
         print("Invalid choice")
 
 
 def should_update_flashcard(flashcard):
-    # 根据您的特定条件来判断是否应该更新 flashcard
-    # 例如，只更新满足某些条件的 flashcard
     query = f"SELECT YesCount, NoCount FROM {LEARNING_TABLE_NAME} WHERE CardID = ?"
     result = fetch_all(query, (flashcard.id,))
     yes_count, no_count = result[0] if result else (0, 0)
@@ -296,7 +276,7 @@ def main():
         if choice == 'q':
             quit_program = True
         else:
-            update_flashcard_status(choice, flashcard)
+            record_flashcard_count(choice, flashcard)
 
     cleanup_and_exit(flashcards)
 
