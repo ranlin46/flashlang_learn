@@ -56,11 +56,24 @@ def load_flashcards():
     query = "SELECT * FROM flashcards_database WHERE status IN (1, 2) AND NextReviewDate = ?"
     records = fetch_all(query, (today,))
 
-    if not records:
+    query = "SELECT DISTINCT CardID FROM Table2"
+    card_ids_in_table2 = [row[0] for row in fetch_all(query)]
+
+    filtered_records = []
+    for record in records:
+        card_id = record[0]
+        if card_id not in card_ids_in_table2:
+            filtered_records.append(record)
+
+    if not filtered_records:
         query = "SELECT * FROM flashcards_database WHERE status IN (1, 2)"
         records = fetch_all(query)
+        for record in records:
+            card_id = record[0]
+            if card_id not in card_ids_in_table2:
+                filtered_records.append(record)
 
-    flashcards = [Flashcard(*record) for record in records]
+    flashcards = [Flashcard(*record) for record in filtered_records]
     random.shuffle(flashcards)
     return flashcards
 
@@ -72,7 +85,9 @@ def enough_data_in_table2():
 
 
 def insert_initial_data():
-    inserted_card_ids = set()
+    query = "SELECT DISTINCT CardID FROM Table2"
+    inserted_card_ids = [row[0] for row in fetch_all(query)]
+
     while not enough_data_in_table2():
         flashcard = random.choice(load_flashcards())
         while flashcard.id in inserted_card_ids:
@@ -80,7 +95,7 @@ def insert_initial_data():
 
         query = "INSERT INTO Table2 (LearnDate, CardID, YesCount, NoCount, LearningStatus) VALUES (?, ?, ?, ?, ?)"
         execute_query(query, (0, flashcard.id, 0, 0, flashcard.status))
-        inserted_card_ids.add(flashcard.id)
+        inserted_card_ids.append(flashcard.id)
 
 
 def get_flashcards():
