@@ -31,14 +31,16 @@ cursor.execute('''
 ''')
 
 cursor.execute("""
-CREATE TABLE IF NOT EXISTS UserWordCard (
-    RecordID INTEGER PRIMARY KEY,
-    UserID INTEGER,
-    CardID INTEGER,
-    StudyDate DATE,
-    NextReviewDate DATE,
-    StudyStatus INTEGER
-)
+    CREATE TABLE IF NOT EXISTS UserWordCard (
+        UserID INTEGER,
+        CardID INTEGER,
+        StudyDate DATE,
+        NextReviewDate DATE,
+        StudyStatus INTEGER,
+        PRIMARY KEY (UserID, CardID),
+        FOREIGN KEY (UserID) REFERENCES Users(UserID),
+        FOREIGN KEY (CardID) REFERENCES Cards(CardID)
+    )
 """)
 
 cursor.execute("""
@@ -48,7 +50,9 @@ CREATE TABLE IF NOT EXISTS StudyRecords (
     CardID INTEGER,
     StudyDate DATE,
     StudyCount INTEGER,
-    ReviewCount INTEGER
+    ReviewCount INTEGER,
+    FOREIGN KEY (UserID) REFERENCES Users(UserID),
+    FOREIGN KEY (CardID) REFERENCES Cards(CardID)
 )
 """)
 
@@ -58,8 +62,10 @@ CREATE TABLE IF NOT EXISTS ReviewPlans (
     UserID INTEGER,
     CardID INTEGER,
     StudyStatus INTEGER,
-    ReviewCount INTEGER,
-    NextReviewDate DATE
+    TotalReviewCount INTEGER,
+    NextReviewDate DATE,
+    FOREIGN KEY (UserID) REFERENCES Users(UserID),
+    FOREIGN KEY (CardID) REFERENCES Cards(CardID)
 )
 """)
 
