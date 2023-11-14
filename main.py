@@ -18,27 +18,31 @@ class Flashcard:
         self.audio_url = audio_url
 
 
-def get_flashcards():
-    query = "SELECT * FROM Cards ORDER BY RANDOM() LIMIT 1"
-    cursor.execute(query)
-    flashcards = [Flashcard(*row) for row in cursor.fetchall()]
-    return flashcards
-
-
 def get_user_study_cards(user_id):
+    # First, select cards with StudyStatus = 1 from UserWordCard
     query = "SELECT C.CardID, C.Phonetic, C.Word, C.Sentence, C.Audio_URL " \
             "FROM Cards C " \
             "JOIN UserWordCard U ON C.CardID = U.CardID " \
             "WHERE U.UserID = ? AND U.StudyStatus = 1"
     cursor.execute(query, (user_id,))
-
     flashcards = [Flashcard(*row) for row in cursor.fetchall()]
 
-    while len(flashcards) < 5:
-        # 如果用户学习状态为1的卡片少于五张，则从get_flashcards()补充
-        flashcards += get_flashcards()
+    # Next, select cards with StudyStatus = 2 and ReviewDate = current date
+    query = "SELECT C.CardID, C.Phonetic, C.Word, C.Sentence, C.Audio_URL " \
+            "FROM Cards C " \
+            "JOIN UserWordCard U ON C.CardID = U.CardID " \
+            "WHERE U.UserID = ? AND U.StudyStatus = 2 AND U.NextReviewDate = DATE('now')"
+    cursor.execute(query, (user_id,))
+    flashcards += [Flashcard(*row) for row in cursor.fetchall()]
 
-    return flashcards
+    # Finally, select cards that the user has not studied yet
+    query = "SELECT * FROM Cards " \
+            "WHERE CardID NOT IN (SELECT CardID FROM UserWordCard WHERE UserID = ?)"
+    cursor.execute(query, (user_id,))
+    flashcards += [Flashcard(*row) for row in cursor.fetchall()]
+
+    # Limit the total number of flashcards to 5
+    return flashcards[:5]
 
 
 def show_flashcard(flashcard):
@@ -104,8 +108,8 @@ def insert_review_plan(user_id, card_id, study_count, review_count):
     # 先查询是否已存在相同的记录
     cursor.execute(
         "SELECT COUNT(*) FROM ReviewPlans "
-        "WHERE UserID = ? AND CardID = ? AND StudyStatus = ? AND TotalReviewCount = ? AND NextReviewDate = ?",
-        (user_id, card_id, study_status, row_count, next_review_date))
+        "WHERE UserID = ? AND CardID = ?  AND TotalReviewCount = ? AND NextReviewDate = ?",
+        (user_id, card_id, row_count, next_review_date))
     existing_record_count = cursor.fetchone()[0]
 
     # 如果不存在相同的记录，再执行插入操作
@@ -115,8 +119,13 @@ def insert_review_plan(user_id, card_id, study_count, review_count):
             "VALUES (?, ?, ?, ?, ?)",
             (user_id, card_id, study_status, row_count, next_review_date))
         conn.commit()
+    # 如果存在相同的记录，则更新该记录
     else:
-        print("相同记录已存在，不执行插入操作。")
+        cursor.execute(
+            "UPDATE ReviewPlans SET StudyStatus = ?, TotalReviewCount = ?, NextReviewDate = ? "
+            "WHERE UserID = ? AND CardID = ?",
+            (study_status, row_count, next_review_date, user_id, card_id))
+        conn.commit()
 
     conn.commit()
 
@@ -142,12 +151,12 @@ def get_study_date(user_id, card_id):
 def insert_or_update_user_word_card(user_id, card_id):
     next_review_date, study_status = get_next_review_date_and_status(user_id, card_id)
     study_date = get_study_date(user_id, card_id)
-    if next_review_date is not None:
-        cursor.execute(
-            "INSERT OR REPLACE INTO UserWordCard (UserID, CardID, StudyDate, NextReviewDate, StudyStatus) "
-            "VALUES (?, ?, ?, ?, ?)",
-            (user_id, card_id, study_date, next_review_date, study_status))
-        conn.commit()
+    cursor.execute(
+        "INSERT OR REPLACE INTO UserWordCard (UserID, CardID, StudyDate, NextReviewDate, StudyStatus) "
+        "VALUES (?, ?, ?, ?, ?)",
+        (user_id, card_id, study_date, next_review_date, study_status))
+
+    conn.commit()
 
 
 def main():
@@ -176,11 +185,13 @@ def main():
             insert_study_record(user_id, flashcard.id, 0, 1)
         elif choice == '3':
             insert_study_record(user_id, flashcard.id, 0, 0)
-            insert_review_plan(user_id, flashcard.id, 0, 0)
-            insert_or_update_user_word_card(user_id, flashcard.id)
+            cursor.execute(
+                "INSERT OR REPLACE INTO UserWordCard (UserID, CardID, StudyDate, NextReviewDate, StudyStatus) "
+                "VALUES (?, ?, CURRENT_DATE, ?, ?)",
+                (user_id, flashcard.id, 0, 3))
             flashcards.remove(flashcard)
-            new_flashcards = get_flashcards()
-            flashcards += new_flashcards
+            new_flashcard = get_user_study_cards(user_id)[-1]
+            flashcards.append(new_flashcard)
 
             # 打印一些信息
             print("You've mastered a card!")
