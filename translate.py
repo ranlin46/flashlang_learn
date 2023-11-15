@@ -5,6 +5,15 @@ conn = sqlite3.connect('flashcards_database.db')
 cursor = conn.cursor()
 
 cursor.execute('''
+    CREATE TABLE IF NOT EXISTS Users (
+        UserID INTEGER PRIMARY KEY AUTOINCREMENT,
+        Username VARCHAR NOT NULL,
+        Password VARCHAR,
+        RegistrationDate DATE
+    )
+''')
+
+cursor.execute('''
     CREATE TABLE IF NOT EXISTS Cards (
         CardId INTEGER PRIMARY KEY AUTOINCREMENT,
         Phonetic TEXT,
@@ -20,15 +29,6 @@ with open('data/url_file.csv', 'r', encoding="utf-8") as csvfile:
     for row in csvreader:
         # 不包括 id 列
         cursor.execute("INSERT INTO Cards (Phonetic, Word, Sentence, Audio_url )VALUES (?, ?, ?, ?)", row)
-
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS Users (
-        UserID INTEGER PRIMARY KEY AUTOINCREMENT,
-        Username VARCHAR NOT NULL,
-        Password VARCHAR,
-        RegistrationDate DATE
-    )
-''')
 
 cursor.execute("""
     CREATE TABLE IF NOT EXISTS UserWordCard (

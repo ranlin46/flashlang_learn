@@ -37,7 +37,7 @@ def get_user_study_cards(user_id):
 
     # Finally, select cards that the user has not studied yet
     query = "SELECT * FROM Cards " \
-            "WHERE CardID NOT IN (SELECT CardID FROM UserWordCard WHERE UserID = ?)"
+            "WHERE CardID NOT IN (SELECT CardID FROM UserWordCard WHERE UserID = ?) ORDER BY RANDOM()"
     cursor.execute(query, (user_id,))
     flashcards += [Flashcard(*row) for row in cursor.fetchall()]
 
@@ -99,33 +99,64 @@ def calculate_study_status(study_count, review_count):
         return 2
 
 
-def insert_review_plan(user_id, card_id, study_count, review_count):
-    study_status = calculate_study_status(study_count, review_count)
-    next_review_date = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
-    cursor.execute("SELECT COUNT(*) FROM StudyRecords WHERE UserID = ? AND CardID = ?",
-                   (user_id, card_id))
-    row_count = cursor.fetchone()[0] - 1
-    # 先查询是否已存在相同的记录
+def calculate_next_review_date():
+    return (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+
+
+def get_row_count(user_id, card_id):
+    cursor.execute("SELECT COUNT(*) FROM StudyRecords WHERE UserID = ? AND CardID = ?", (user_id, card_id))
+    return cursor.fetchone()[0] - 1
+
+
+def get_existing_record_count(user_id, card_id, row_count, next_review_date):
     cursor.execute(
         "SELECT COUNT(*) FROM ReviewPlans "
         "WHERE UserID = ? AND CardID = ?  AND TotalReviewCount = ? AND NextReviewDate = ?",
         (user_id, card_id, row_count, next_review_date))
-    existing_record_count = cursor.fetchone()[0]
+    return cursor.fetchone()[0]
 
-    # 如果不存在相同的记录，再执行插入操作
-    if existing_record_count == 0:
-        cursor.execute(
-            "INSERT INTO ReviewPlans (UserID, CardID, StudyStatus, TotalReviewCount, NextReviewDate) "
-            "VALUES (?, ?, ?, ?, ?)",
-            (user_id, card_id, study_status, row_count, next_review_date))
-        conn.commit()
-    # 如果存在相同的记录，则更新该记录
+
+def insert_review_plan_record(user_id, card_id, study_status, row_count, next_review_date):
+    cursor.execute(
+        "INSERT INTO ReviewPlans (UserID, CardID, StudyStatus, TotalReviewCount, NextReviewDate) "
+        "VALUES (?, ?, ?, ?, ?)",
+        (user_id, card_id, study_status, row_count, next_review_date))
+
+
+def update_review_plan_record(user_id, card_id, study_status, row_count, next_review_date):
+    cursor.execute(
+        "UPDATE ReviewPlans SET StudyStatus = ?, TotalReviewCount = ?, NextReviewDate = ? "
+        "WHERE UserID = ? AND CardID = ?",
+        (study_status, row_count, next_review_date, user_id, card_id))
+
+
+def calculate_review_plan(user_id, card_id, study_count, review_count):
+    study_status = calculate_study_status(study_count, review_count)
+    next_review_date = calculate_next_review_date()
+    check_review_plan(user_id, card_id, study_status, next_review_date)
+
+
+def check_review_plan(user_id, card_id, study_status, next_review_date, optional_param=None):
+    row_count = get_row_count(user_id, card_id)
+    existing_record_count = get_existing_record_count(user_id, card_id, row_count, next_review_date)
+    if optional_param is not None:
+        change_review_plan(user_id, card_id, study_status, next_review_date, row_count, existing_record_count, True)
     else:
-        cursor.execute(
-            "UPDATE ReviewPlans SET StudyStatus = ?, TotalReviewCount = ?, NextReviewDate = ? "
-            "WHERE UserID = ? AND CardID = ?",
-            (study_status, row_count, next_review_date, user_id, card_id))
-        conn.commit()
+        change_review_plan(user_id, card_id, study_status, next_review_date, row_count, existing_record_count, False)
+
+
+def change_review_plan(user_id, card_id, study_status, next_review_date, row_count, existing_record_count,
+                       only_insert_update=False):
+    if only_insert_update:
+        if existing_record_count == 0:
+            insert_review_plan_record(user_id, card_id, 3, row_count, 0)
+        else:
+            update_review_plan_record(user_id, card_id, 3, row_count, 0)
+    else:
+        if existing_record_count == 0:
+            insert_review_plan_record(user_id, card_id, study_status, row_count, next_review_date)
+        else:
+            update_review_plan_record(user_id, card_id, study_status, row_count, next_review_date)
 
     conn.commit()
 
@@ -159,6 +190,37 @@ def insert_or_update_user_word_card(user_id, card_id):
     conn.commit()
 
 
+def handle_user_choice(choice, user_id, flashcard):
+    if choice == '1':
+        insert_study_record(user_id, flashcard.id, 1, 0)
+    elif choice == '2':
+        insert_study_record(user_id, flashcard.id, 0, 1)
+
+
+def handle_mastered_card(user_id, flashcard, flashcards):
+    insert_study_record(user_id, flashcard.id, 0, 0)
+    cursor.execute(
+        "INSERT OR REPLACE INTO UserWordCard (UserID, CardID, StudyDate, NextReviewDate, StudyStatus) "
+        "VALUES (?, ?, CURRENT_DATE, ?, ?)",
+        (user_id, flashcard.id, 0, 3))
+    conn.commit()
+    check_review_plan(user_id, flashcard.id, 3, 0, optional_param=True)
+    flashcards.remove(flashcard)
+    new_flashcard = get_user_study_cards(user_id)[-1]
+    flashcards.append(new_flashcard)
+
+
+def process_remaining_flashcards(user_id, flashcards):
+    for flashcard in flashcards:
+        study_record = cursor.execute(
+            "SELECT StudyCount, ReviewCount FROM StudyRecords WHERE UserID = ? AND CardID = ?",
+            (user_id, flashcard.id)).fetchone()
+        if study_record:
+            study_count, review_count = study_record
+            calculate_review_plan(user_id, flashcard.id, study_count, review_count)
+            insert_or_update_user_word_card(user_id, flashcard.id)
+
+
 def main():
     username = input("请输入用户名: ")
     user_exists = check_user_existence(username)
@@ -179,34 +241,14 @@ def main():
         show_flashcard(flashcard)
         choice = input("\nChoose an action (1/2/3) or press 'q' to quit: ")
 
-        if choice == '1':
-            insert_study_record(user_id, flashcard.id, 1, 0)
-        elif choice == '2':
-            insert_study_record(user_id, flashcard.id, 0, 1)
+        if choice in {'1', '2'}:
+            handle_user_choice(choice, user_id, flashcard)
         elif choice == '3':
-            insert_study_record(user_id, flashcard.id, 0, 0)
-            cursor.execute(
-                "INSERT OR REPLACE INTO UserWordCard (UserID, CardID, StudyDate, NextReviewDate, StudyStatus) "
-                "VALUES (?, ?, CURRENT_DATE, ?, ?)",
-                (user_id, flashcard.id, 0, 3))
-            flashcards.remove(flashcard)
-            new_flashcard = get_user_study_cards(user_id)[-1]
-            flashcards.append(new_flashcard)
-
-            # 打印一些信息
-            print("You've mastered a card!")
-
+            handle_mastered_card(user_id, flashcard, flashcards)
         elif choice == 'q':
             quit_program = True
 
-    for flashcard in flashcards:
-        study_record = cursor.execute(
-            "SELECT StudyCount, ReviewCount FROM StudyRecords WHERE UserID = ? AND CardID = ?",
-            (user_id, flashcard.id)).fetchone()
-        if study_record:
-            study_count, review_count = study_record
-            insert_review_plan(user_id, flashcard.id, study_count, review_count)
-            insert_or_update_user_word_card(user_id, flashcard.id)
+    process_remaining_flashcards(user_id, flashcards)
 
     conn.commit()
 
