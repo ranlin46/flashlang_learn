@@ -51,8 +51,8 @@ CREATE TABLE IF NOT EXISTS StudyRecords (
     StudyDate DATE,
     StudyCount INTEGER,
     ReviewCount INTEGER,
-    FOREIGN KEY (UserID) REFERENCES Users(UserID),
-    FOREIGN KEY (CardID) REFERENCES Cards(CardID)
+    FOREIGN KEY (UserID) REFERENCES UserWordCard(UserID),
+    FOREIGN KEY (CardID) REFERENCES UserWordCard(CardID)
 )
 """)
 
@@ -64,8 +64,8 @@ CREATE TABLE IF NOT EXISTS ReviewPlans (
     StudyStatus INTEGER,
     TotalReviewCount INTEGER,
     NextReviewDate DATE,
-    FOREIGN KEY (UserID) REFERENCES Users(UserID),
-    FOREIGN KEY (CardID) REFERENCES Cards(CardID)
+    FOREIGN KEY (UserID) REFERENCES UserWordCard(UserID),
+    FOREIGN KEY (CardID) REFERENCES UserWordCard(CardID)
 )
 """)
 
